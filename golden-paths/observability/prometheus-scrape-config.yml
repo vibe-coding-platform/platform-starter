@@ -1,0 +1,11 @@
+# Prometheus scrape config fragment (to be merged into main Prometheus config)
+
+scrape_configs:
+  - job_name: 'orders-service'
+    metrics_path: '/actuator/prometheus'
+    scrape_interval: 15s
+    static_configs:
+      - targets: ['orders-service:8080']
+        labels:
+          app: 'orders-service'
+          env: 'staging'

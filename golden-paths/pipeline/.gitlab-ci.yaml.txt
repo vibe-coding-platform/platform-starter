@@ -1,0 +1,38 @@
+stages:
+  - validate
+  - build
+  - test
+  - security
+  - deploy
+
+validate:
+  stage: validate
+  script:
+    - ./pre-commit.sh  # Ch 23 golden paths
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+
+build:
+  stage: build
+  script:
+    - mvn clean package -DskipTests
+  artifacts:
+    paths: [target/*.jar]
+
+test:
+  stage: test
+  script:
+    - mvn test jacoco:report
+    - sonar-scanner
+
+security:
+  stage: security
+  image: aquasec/trivy
+  script:
+    - trivy fs .
+
+deploy-staging:
+  stage: deploy
+  script:
+    - kubectl apply -f k8s/
+  environment: staging

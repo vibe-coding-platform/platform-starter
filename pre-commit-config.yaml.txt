@@ -1,0 +1,11 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.4.0
+    hooks:
+      - id: trailing-whitespace
+      - id: check-yaml
+  - repo: local
+    hooks:
+      - id: golden-paths
+        name: Enforce Ch 23 patterns
+        entry: ./validate-golden-paths.sh

@@ -1,0 +1,65 @@
+#.gitlab-ci.yml
+# Ch 22: Golden Path Pipeline Template
+# Build → Test → Scan → Deploy (95% compliance enforced)
+
+stages:
+  - validate      # Ch 23: Pre-commit patterns
+  - build         # Maven package
+  - test          # Unit + Sonar
+  - security      # Trivy scan
+  - deploy        # Staging
+
+variables:
+  MAVEN_OPTS: "-Dmaven.repo.local=.m2/repository"
+
+# Ch 23: Enforce golden paths FIRST
+validate:
+  stage: validate
+  script:
+    - echo "✅ Pre-commit: Golden path compliance"
+    - mvn validate -Ppre-commit
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+
+# Ch 20: Observability-ready build
+build:
+  stage: build
+  image: maven:3.9-openjdk-17
+  script:
+    - mvn clean package -DskipTests
+  artifacts:
+    paths:
+      - target/*.jar
+    expire_in: 1 hour
+
+# Ch 36: Test + coverage
+test:
+  stage: test
+  image: maven:3.9-openjdk-17
+  script:
+    - mvn test jacoco:report
+  artifacts:
+    reports:
+      junit: target/surefire-reports/TEST-*.xml
+    paths:
+      - target/site/jacoco/
+
+# Ch 37: Security gates
+security:
+  stage: security
+  image: aquasec/trivy:latest
+  script:
+    - trivy fs .
+  allow_failure: false
+
+# Ch 23: Deploy to staging (manual approval for prod)
+deploy-staging:
+  stage: deploy
+  image: bitnami/kubectl:latest
+  script:
+    - kubectl apply -f k8s/staging/
+  environment:
+    name: staging
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+  when: manual
